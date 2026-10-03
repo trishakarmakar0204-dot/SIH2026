@@ -1,4 +1,5 @@
 """MEMBER 3 owns this file. Run from the project root:  uvicorn backend.main:app --reload"""
+from datetime import date
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -56,9 +57,16 @@ def voice(b: VoiceIn):
 
 @app.post("/grievance")
 def grievance(b: GrievanceIn):
-    draft = (f"To,\nThe Secretary, {b.society}\n\nSubject: Grievance regarding {b.issue}\n\n"
-             f"I, {b.name}, a member from {b.village}, wish to report the following issue: {b.issue}. "
-             f"Date of incident: {b.date or 'not specified'}. I request your kind action and a written acknowledgment.\n\nSincerely,\n{b.name}")
+    issue = b.issue.strip().rstrip(".")
+    when = f" Date of incident: {b.date}." if b.date else ""
+    draft = (f"Date: {date.today().strftime('%d %B %Y')}\n\n"
+             f"To,\nThe Secretary,\n{b.society}\n\n"
+             f"Subject: Grievance from {b.name}, {b.village}\n\n"
+             f"Respected Sir/Madam,\n\n"
+             f"I, {b.name}, a member from {b.village}, wish to bring the following issue to your notice:\n\n"
+             f"{issue}.{when}\n\n"
+             f"I request your kind action and a written acknowledgment of this grievance.\n\n"
+             f"Yours sincerely,\n{b.name}\nVillage: {b.village}")
     return {"draft_text": draft}
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="ui")   # keep this LAST
