@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from language.bhashini_layer import translate, tts, asr_to_english
+from language.layer_sarvam import translate, tts, asr_to_english
 from rag import engine
 
 app = FastAPI(title="Cooperative Sahayak")
