@@ -4,46 +4,141 @@
 <!-- MEMBER 4 owns this file. Keep it simple and clear. -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&family=Noto+Sans+Devanagari&family=Noto+Sans+Oriya&family=Noto+Sans+Tamil&family=Noto+Sans+Telugu&display=swap" rel="stylesheet">
 <style>
-body{font-family:'Noto Sans Devanagari','Noto Sans Bengali','Noto Sans Oriya','Noto Sans Tamil','Noto Sans Telugu',sans-serif;max-width:640px;margin:0 auto;padding:16px;font-size:18px;color:#1b2a1b;background:#f6f8f3}
-h1{font-size:24px;margin:0 0 12px}
-select,input,button{font:inherit;padding:12px;margin:4px 0;width:100%;box-sizing:border-box;border:1px solid #6b8a5a;border-radius:6px;background:#fff}
-button{background:#2f6b2f;color:#fff;border:0;cursor:pointer}
+body{font-family:'Noto Sans Devanagari','Noto Sans Bengali','Noto Sans Oriya','Noto Sans Tamil','Noto Sans Telugu',sans-serif;max-width:640px;margin:0 auto;padding:16px;font-size:18px;line-height:1.5;color:#1b2a1b;background:#f6f8f3}
+h1{font-size:24px;margin:0 0 8px}
+h2{font-size:20px;margin:12px 0 4px}
+label{display:block;font-weight:bold;margin-top:10px}
+select,input,textarea,button{font:inherit;padding:12px;margin:4px 0;width:100%;box-sizing:border-box;border:1px solid #6b8a5a;border-radius:6px;background:#fff;color:#1b2a1b}
+input[type=checkbox]{width:auto;margin:0 8px 0 0;transform:scale(1.3)}
+label.chk{font-weight:normal;display:flex;align-items:center;margin:8px 0}
+button{background:#2f6b2f;color:#fff;border:0;cursor:pointer;min-height:48px}
+button:disabled{opacity:.6;cursor:not-allowed}
+button.sec{background:#fff;color:#2f6b2f;border:2px solid #2f6b2f}
 #mic{background:#b3401c;font-size:22px;padding:18px}
+#mic.rec{background:#7a1f0a}
+:focus-visible,#out:focus{outline:3px solid #0b57d0;outline-offset:2px}
 #out{margin-top:16px;display:none;background:#fff;border:1px solid #cfdcc4;border-radius:6px;padding:12px}
-.src{font-size:15px;color:#4a5f3d}
-pre{white-space:pre-wrap;word-break:break-word;font:inherit;font-size:16px}
+.src{font-size:15px;color:#33442b}
+.note{font-size:15px;color:#33442b;margin:0 0 8px}
+#status{min-height:1.5em;font-weight:bold;color:#7a1f0a;margin:8px 0}
+pre{white-space:pre-wrap;word-break:break-word;font:inherit;font-size:16px;background:#fff;border:1px solid #cfdcc4;border-radius:6px;padding:12px}
+pre:empty{display:none}
+[hidden]{display:none!important}
 </style></head><body>
+<main>
 <h1>Cooperative Sahayak</h1>
+<p class="note">Answers are quoted from official Government of India documents. This is not legal advice. Please do not type personal details you do not want to share.</p>
+
+<label for="lang">Language</label>
 <select id="lang">
  <option value="hi">हिन्दी</option><option value="bn">বাংলা</option><option value="or">ଓଡ଼ିଆ</option>
  <option value="as">অসমীয়া</option><option value="ta">தமிழ்</option><option value="te">తెలుగు</option><option value="en">English</option>
 </select>
-<button id="mic">🎤 Tap to speak, tap again to stop</button>
-<input id="txt" placeholder="Or type your question">
-<button id="send">Ask</button>
-<div id="out"><div id="ans"></div><ol id="steps"></ol><div class="src" id="src"></div>
- <button id="gr">Help me file a grievance</button><pre id="draft"></pre></div>
+
+<button id="mic" type="button" aria-pressed="false">🎤 Tap to speak, tap again to stop</button>
+
+<label for="txt">Or type your question</label>
+<input id="txt" type="text" maxlength="500" autocomplete="off" enterkeyhint="send">
+<label class="chk"><input type="checkbox" id="speak" checked> Read the answer aloud</label>
+<button id="send" type="button">Ask</button>
+
+<p id="status" role="status" aria-live="polite"></p>
+
+<div id="out" tabindex="-1" aria-live="polite">
+ <div id="ans"></div>
+ <ol id="steps"></ol>
+ <div class="src" id="src"></div>
+ <button id="replay" type="button" class="sec" hidden>🔊 Play the answer again</button>
+ <button id="gr" type="button">Help me file a grievance</button>
+</div>
+
+<div id="gform" hidden>
+ <h2>Grievance details</h2>
+ <p class="note">This only creates a draft letter on this page. It is not sent or saved anywhere.</p>
+ <label for="g_name">Your name</label>
+ <input id="g_name" type="text" maxlength="80" autocomplete="name">
+ <label for="g_village">Village</label>
+ <input id="g_village" type="text" maxlength="80">
+ <label for="g_society">Cooperative society name</label>
+ <input id="g_society" type="text" maxlength="120">
+ <label for="g_issue">What is the problem?</label>
+ <textarea id="g_issue" rows="4" maxlength="1000"></textarea>
+ <button id="g_make" type="button">Create letter</button>
+ <button id="g_cancel" type="button" class="sec">Cancel</button>
+</div>
+
+<pre id="draft" tabindex="0" aria-label="Draft grievance letter"></pre>
+<button id="copy" type="button" class="sec" hidden>Copy the letter</button>
+</main>
+
 <script>
 const $=id=>document.getElementById(id);
-function show(r){
+let rec=null,parts=[],lastAudio=null;
+
+function status(msg){$('status').textContent=msg||'';}
+function setBusy(b){
+  ['send','gr','g_make','copy','replay'].forEach(id=>{$(id).disabled=b;});
+  $('mic').disabled=b&&!(rec&&rec.state==='recording');
+}
+async function post(path,body){
+  const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  let data=null;try{data=await res.json();}catch(e){}
+  if(!res.ok)throw new Error(data&&typeof data.detail==='string'?data.detail:'Something went wrong. Please try again.');
+  return data;
+}
+function playAudio(){
+  if(!lastAudio)return;
+  const a=new Audio(lastAudio);
+  a.play().catch(()=>status('Tap "Play the answer again" to hear it.'));
+}
+function show(r,lang){
   $('out').style.display='block';
+  $('ans').setAttribute('lang',lang);
   $('ans').textContent=r.answer;
   $('steps').innerHTML=(r.steps||[]).map(s=>'<li>'+s.replace(/</g,'&lt;')+'</li>').join('');
   $('src').textContent=r.verified?('Source: '+r.sources.join(', ')):'Not verified from official documents';
-  if(r.audio_b64) new Audio('data:audio/wav;base64,'+r.audio_b64).play();
+  lastAudio=r.audio_b64?('data:audio/wav;base64,'+r.audio_b64):null;
+  $('replay').hidden=!lastAudio;
+  $('draft').textContent='';$('copy').hidden=true;$('gform').hidden=true;
+  status('Answer ready.');
+  $('out').focus();
+  playAudio();
 }
-async function post(path,body){const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return res.json();}
-$('send').onclick=async()=>show(await post('/chat',{text:$('txt').value,lang:$('lang').value,speak:true}));
 
-let rec,parts=[];
+async function ask(){
+  const text=$('txt').value.trim(),lang=$('lang').value;
+  if(!text){status('Please type a question first.');$('txt').focus();return;}
+  setBusy(true);status('Finding the answer…');
+  try{show(await post('/chat',{text,lang,speak:$('speak').checked}),lang);}
+  catch(e){status(e.message);}
+  finally{setBusy(false);}
+}
+$('send').onclick=ask;
+$('txt').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ask();}});
+$('replay').onclick=playAudio;
+
+function micState(on){
+  const m=$('mic');
+  m.setAttribute('aria-pressed',on?'true':'false');
+  m.classList.toggle('rec',on);
+  m.textContent=on?'⏹ Recording… tap to stop':'🎤 Tap to speak, tap again to stop';
+}
 $('mic').onclick=async()=>{
   if(rec&&rec.state==='recording'){rec.stop();return;}
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}
+  catch(e){status('The microphone is not available. Please allow microphone access (this needs a secure https link), or type your question.');return;}
+  const lang=$('lang').value;
   rec=new MediaRecorder(stream);parts=[];
   rec.ondataavailable=e=>parts.push(e.data);
-  rec.onstop=async()=>{stream.getTracks().forEach(t=>t.stop());
-    show(await post('/voice',{audio_b64:await toWav(new Blob(parts)),lang:$('lang').value}));};
-  rec.start();
+  rec.onstop=async()=>{
+    stream.getTracks().forEach(t=>t.stop());
+    micState(false);setBusy(true);status('Finding the answer…');
+    try{show(await post('/voice',{audio_b64:await toWav(new Blob(parts)),lang}),lang);}
+    catch(e){status(e.message);}
+    finally{setBusy(false);}
+  };
+  rec.start();micState(true);status('Listening… tap the button again when you finish speaking.');
 };
 async function toWav(blob){            // browser audio -> 16 kHz mono wav -> base64
   const ctx=new AudioContext({sampleRate:16000});
@@ -57,9 +152,23 @@ async function toWav(blob){            // browser audio -> 16 kHz mono wav -> ba
   const b=new Uint8Array(v.buffer);let s='';for(let i=0;i<b.length;i+=8192)s+=String.fromCharCode(...b.subarray(i,i+8192));
   return btoa(s);
 }
-$('gr').onclick=async()=>{
-  const name=prompt('Your name'),village=prompt('Village'),society=prompt('Cooperative society name'),issue=prompt('What is the problem?');
-  if(!issue)return;
-  $('draft').textContent=(await post('/grievance',{name,village,society,issue})).draft_text;
+
+$('gr').onclick=()=>{$('gform').hidden=false;$('g_name').focus();};
+$('g_cancel').onclick=()=>{$('gform').hidden=true;$('gr').focus();};
+$('g_make').onclick=async()=>{
+  const f={name:$('g_name').value.trim(),village:$('g_village').value.trim(),society:$('g_society').value.trim(),issue:$('g_issue').value.trim()};
+  if(!f.name||!f.village||!f.society||!f.issue){status('Please fill in all four boxes.');return;}
+  setBusy(true);status('Preparing your letter…');
+  try{
+    const r=await post('/grievance',f);
+    $('draft').textContent=r.draft_text;$('copy').hidden=false;$('gform').hidden=true;
+    status('Your draft letter is ready below. It has not been sent anywhere.');
+    $('draft').focus();
+  }catch(e){status(e.message);}
+  finally{setBusy(false);}
+};
+$('copy').onclick=async()=>{
+  try{await navigator.clipboard.writeText($('draft').textContent);status('Letter copied.');}
+  catch(e){status('Could not copy. Please select the text and copy it.');}
 };
 </script></body></html>
