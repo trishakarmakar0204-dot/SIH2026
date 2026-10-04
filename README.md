@@ -7,7 +7,7 @@ Built for Smart India Hackathon 2026, Problem Statement **26088**: *Multilingual
 |---|---|
 | Team | LoadShedding |
 | Team ID | 142669 |
-| Category | Hardware (software prototype working; Hardware: Raspberry Pi kiosk) |
+| Category | Hardware + Software (working web prototype; Raspberry Pi kiosk setup guide in `kiosk/`) |
 
 > **Disclaimer:** Answers are quoted from official Government of India documents. This is information, not legal advice.
 
@@ -28,6 +28,18 @@ Members of cooperative societies often need to know their rights, procedures and
 ## Languages
 
 English, Hindi, Bengali, Odia, Assamese, Tamil and Telugu (seven in total), using Sarvam AI for translation, speech-to-text and text-to-speech.
+
+## Hardware: Raspberry Pi kiosk
+
+A Raspberry Pi with a USB microphone and speaker works as a public kiosk. It opens the assistant full-screen in Chromium kiosk mode and connects to the backend running on a laptop on the same Wi-Fi or hotspot. Step-by-step setup is in [kiosk/README.md](kiosk/README.md).
+
+Start the backend for the kiosk with:
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0
+```
+
+On a local network the kiosk uses plain `http`, so Chromium is started with a flag that allows microphone access. Use this only on a network you trust.
 
 ## How it works
 
@@ -112,9 +124,14 @@ Other safeguards: only the seven supported languages are accepted, the API docs 
 
 ```
 SIH2026/
-├── backend/      FastAPI app (main.py): endpoints, limits, validation
-├── frontend/     index.html: accessible web page
-├── rag/          engine.py: sentence indexing and retrieval
+├── backend/        FastAPI app (main.py): endpoints, limits, validation
+├── frontend/       index.html: accessible web page
+├── rag/            engine.py: sentence indexing and retrieval
+├── language/       translation and speech helpers
+├── kiosk/          Raspberry Pi kiosk setup guide
+├── docs/           project documents
+├── .env.example    template for the API key
+├── requirements.txt
 └── README.md
 ```
 
@@ -123,19 +140,16 @@ SIH2026/
 - Answers come only from the three documents above; questions outside them get no answer.
 - Hindi and Bengali are the most tested languages; Odia, Assamese, Tamil and Telugu need further testing.
 - Needs internet access for the Sarvam AI services.
+- The kiosk needs the backend running on a laptop on the same network; it does not run offline.
 - Rate limits are stored in memory, so they reset when the server restarts and apply to a single server instance.
 
 ## Roadmap
 
-- Raspberry Pi kiosk with microphone and speaker for the hardware component
+- Test the kiosk on the final Raspberry Pi hardware and make it start automatically on boot
 - Full testing and tuning for Odia, Assamese, Tamil and Telugu
 - More documents in the knowledge base (state cooperative acts, scheme guidelines)
 - Persistent rate limiting for multi-server deployment
 
 ## Team
 
-`<Add team members' names and roles here>`
-
-## Licence
-
-`<Add a licence, e.g. MIT, or remove this section>`
+Team LoadShedding: add member names and roles here.
