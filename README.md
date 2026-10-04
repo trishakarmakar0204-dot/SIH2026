@@ -7,7 +7,7 @@ Built for Smart India Hackathon 2026, Problem Statement **26088**: *Multilingual
 |---|---|
 | Team | LoadShedding |
 | Team ID | 142669 |
-| Category | Hardware (software prototype working; kiosk hardware planned) |
+| Category | Hardware (software prototype working; Hardware: Raspberry Pi kiosk) |
 
 > **Disclaimer:** Answers are quoted from official Government of India documents. This is information, not legal advice.
 
